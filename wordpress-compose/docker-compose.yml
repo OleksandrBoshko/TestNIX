@@ -1,0 +1,56 @@
+version: '2'
+services:
+  nginx:
+      image: nginx:latest
+      ports:
+          - '80:80'
+      logging:
+          driver: "syslog"
+          options:
+              syslog-address: "udp://logs3.papertrailapp.com:29099"
+              tag: "nginx"
+      volumes:
+          - ./nginx:/etc/nginx/conf.d
+          - ./logs/nginx:/var/log/nginx
+          - ./wordpress:/var/www/html
+      links:
+          - wordpress
+      restart: always
+  mysql:
+      image: mariadb
+      ports:
+          - '3306:3306'
+      logging:
+          driver: "syslog"
+          options:
+              syslog-address: "udp://logs3.papertrailapp.com:29099"
+              tag: "mysql"
+      volumes:
+          - ./db-data:/var/lib/mysql
+      environment:
+          - MYSQL_ROOT_PASSWORD=aqwe123
+      restart: always
+  wordpress:
+      image: wordpress:4.9.3-php7.0-fpm
+      ports:
+          - '9000:9000'
+      volumes:
+          - ./wordpress:/var/www/html
+      environment:
+          - WORDPRESS_DB_NAME=wpdb
+          - WORDPRESS_TABLE_PREFIX=wp_
+          - WORDPRESS_DB_HOST=mysql
+          - WORDPRESS_DB_PASSWORD=aqwe123
+      links:
+          - mysql
+      restart: always
+  datadog:
+      build: datadog
+      links:
+       - wordpress
+      environment:
+       - API_KEY=824c0f566f2210396a6c77f77189d93e
+      volumes:
+       - /var/run/docker.sock:/var/run/docker.sock
+       - /proc/mounts:/host/proc/mounts:ro
+       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
